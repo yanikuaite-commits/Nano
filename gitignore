@@ -1,0 +1,10 @@
+node_modules/
+sessao_ia/
+*.log
+npm-debug.log*
+.env
+.env.local
+.DS_Store
+Thumbs.db
+dono.txt
+.pm2/
