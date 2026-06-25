@@ -1,0 +1,29 @@
+{
+  "name": "nano-bot",
+  "version": "2.0.0",
+  "description": "Nano bot 🤖 - Bot WhatsApp multi-funcional",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Nano bot funcionando!\""
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "nano",
+    "baileys"
+  ],
+  "author": "Yanik Eusébio Uaite",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "groq-sdk": "^0.5.0",
+    "pino": "^8.17.0",
+    "axios": "^1.6.0",
+    "google-tts-api": "^2.0.2",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
