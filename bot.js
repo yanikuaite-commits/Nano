@@ -37,7 +37,7 @@ const db = {
         antiFoto: new Set(),
         palavrasBanidas: new Map(),
         banidos: new Map(),
-        boasvindas: new Map()   // Configuração de boas-vindas por grupo
+        boasvindas: new Map()   // mensagem de boas-vindas por grupo
     }
 };
 
@@ -49,7 +49,7 @@ const NIVEIS_VIP = {
     lenda:    { nome: 'Lenda 👑',    admin: true,  ban: true  }
 };
 
-// Servidor básico para manter online
+// Servidor HTTP para health-check e auto-ping
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`<h1>💜 ${CONFIG.botName}</h1><p>Criado por ${CONFIG.creator}</p><p>🟢 Online</p>`);
@@ -92,7 +92,9 @@ const utils = {
         return msg.message?.conversation || 
                msg.message?.extendedTextMessage?.text || 
                msg.message?.imageMessage?.caption || 
-               msg.message?.videoMessage?.caption || "";
+               msg.message?.videoMessage?.caption || 
+               msg.message?.documentMessage?.caption ||
+               "";
     },
 
     getQuotedMention: (msg) => {
@@ -158,16 +160,26 @@ const commands = {
     },
 
     'menuadm': async (sock, ctx) => {
-        const text = utils.formatMenu('ADMINISTRAÇÃO', [
-            '!ban @pessoa', '!todos', '!fechargp', '!abrirgp'
+        const text = utils.formatMenu('GESTÃO DO GRUPO', [
+            '!ban @pessoa',
+            '!todos',
+            '!fechargp',
+            '!abrirgp',
+            '!antilink [ban/kick/delete]',
+            '!antifoto [on/off]',
+            '!addpalavra [palavra]',
+            '!delpalavra [palavra]',
+            '!listapalavras',
+            '!listaban'
         ]);
         await sock.sendMessage(ctx.chatId, { text });
     },
 
     'menubn': async (sock, ctx) => {
-        const text = utils.formatMenu('AUTO-MODERAÇÃO', [
-            '!ban @pessoa', '!antilink [ban/kick/delete]', '!antifoto [on/off]',
-            '!addpalavra [palavra]', '!delpalavra [palavra]', '!listapalavras', '!listaban'
+        const text = utils.formatMenu('PUNIÇÕES RÁPIDAS', [
+            '!ban @pessoa',
+            '!todos',
+            '!listaban'
         ]);
         await sock.sendMessage(ctx.chatId, { text });
     },
@@ -364,7 +376,8 @@ const commands = {
         } catch (e) { await sock.sendMessage(ctx.chatId, { text: "❌ Erro!" }); }
     },
 
-    // ============ AUTO-MODERAÇÃO ============
+    // ============ AUTO-MODERAÇÃO (executada automaticamente na PARTE 4) ============
+    // Os comandos abaixo apenas configuram as regras
     'antilink': async (sock, ctx) => {
         if (!ctx.isGroup || !utils.hasAdminRights(ctx.senderId)) return;
         const mode = ctx.args[0];
@@ -471,7 +484,7 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // ============ EVENTOS DE GRUPO (BOAS-VINDAS) ============
+    // ============ BOAS-VINDAS (evento de entrada) ============
     sock.ev.on('group-participants.update', async (event) => {
         const { id: groupId, participants, action } = event;
         if (action === 'add' && db.grupos.boasvindas.has(groupId)) {
@@ -488,6 +501,7 @@ async function startBot() {
         }
     });
 
+    // ============ MENSAGENS ============
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message || msg.key.fromMe) return;
@@ -499,7 +513,7 @@ async function startBot() {
         
         if (!fullText) return;
 
-        // --- AUTO-MODERAÇÃO ---
+        // --- AUTO-MODERAÇÃO (apaga e adverte) ---
         if (isGroup && !utils.hasAdminRights(senderId)) {
             const antiLinkMode = db.grupos.antiLink.get(chatId);
             if (antiLinkMode && /https?:\/\//i.test(fullText)) {
@@ -537,16 +551,19 @@ async function startBot() {
             return; 
         }
 
-        // --- IA CONVERSACIONAL ---
+        // --- IA CONVERSACIONAL (nunca ignora) ---
         if (!isGroup) {
+            // No privado, responde a absolutamente tudo
             await sock.sendPresenceUpdate('composing', chatId);
             const resposta = await askGroq(chatId, fullText);
             await sock.sendMessage(chatId, { text: resposta }, { quoted: msg });
         } else if (fullText.toLowerCase().includes('nano') || fullText.toLowerCase().includes('bot')) {
+            // No grupo, só quando mencionam o bot
             await sock.sendPresenceUpdate('composing', chatId);
             const resposta = await askGroq(chatId, fullText);
             await sock.sendMessage(chatId, { text: resposta }, { quoted: msg });
         }
+        // Mensagens que não são comandos nem mencionam o bot em grupos são silenciosamente ignoradas
     });
 
     sock.ev.on('connection.update', (update) => {
@@ -571,3 +588,13 @@ async function startBot() {
 
 // ========= INICIAR ==========
 startBot().catch(console.error);
+
+// ========= AUTO-PING (mantém o Render acordado) ==========
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`;
+setInterval(() => {
+    http.get(RENDER_URL, (res) => {
+        console.log(`🔄 Auto-ping: ${res.statusCode}`);
+    }).on('error', (e) => {
+        console.log(`⚠️ Falha no auto-ping: ${e.message}`);
+    });
+}, 9 * 60 * 1000); // 9 minutos
