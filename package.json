@@ -1,0 +1,21 @@
+{
+  "name": "nano-bot",
+  "version": "3.0.0",
+  "description": "Nano Bot 🤖 - Bot WhatsApp multi-funcional criado por Yanik Eusébio Uaite",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "keywords": ["whatsapp", "bot", "nano", "baileys", "groq", "ai"],
+  "author": "Yanik Eusébio Uaite",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "groq-sdk": "^0.5.0",
+    "pino": "^8.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
